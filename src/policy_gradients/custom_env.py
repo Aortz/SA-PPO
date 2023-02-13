@@ -36,8 +36,10 @@ class Env:
                             if len(action_shape) == 0 else action_shape[0]
         
         # Number of features
+        # print(f"env_observation_space : {len(self.env.reset()[0])}")
         assert len(self.env.observation_space.shape) == 1
-        self.num_features = self.env.reset().shape[0]
+        self.num_features = len(self.env.reset()[0])
+        # print(f"self.num_features: {self.num_features}")
 
         # Support for state normalization or using time as a feature
         self.state_filter = Identity()
@@ -94,9 +96,10 @@ class Env:
 
     def reset(self):
         # Set a deterministic random seed for reproduicability
-        self.env.seed(random.getrandbits(31))
+        self.env.reset(seed=random.getrandbits(31))
         # Reset the state, and the running total reward
-        start_state = self.env.reset()
+        start_state = self.env.reset()[0]
+        # print(f"start_state: {start_state}")
         self.total_true_reward = 0.0
         self.counter = 0.0
         self.episode_counter += 1
@@ -108,7 +111,8 @@ class Env:
         return self.state_filter(start_state, reset=True)
 
     def step(self, action):
-        state, reward, is_done, info = self.env.step(action)
+        # print(f"self.env.step(action): {self.env.step(action)}")
+        state, reward, is_done, info = self.env.step(action)[0], self.env.step(action)[1], self.env.step(action)[2], self.env.step(action)[4]
         if self.show_env:
             self.env.render()
         # Frameskip (every 6 frames, will be rendered at 25 fps)

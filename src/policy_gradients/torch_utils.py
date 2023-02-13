@@ -1,6 +1,7 @@
 import torch as ch
 from torch.distributions.categorical import Categorical
 import numpy as np
+import numpy.ma as ma
 '''
 Common functions/utilities implemented in PyTorch
 Sorted into categories:
@@ -92,6 +93,9 @@ def cpu_tensorize(t):
     Returns:
     - Tensor version of t
     '''
+    t = np.array(t, dtype=np.float)
+    # print(t)
+    # new_t = t.reshape((1,))
     return ch.tensor(t).float()
 
 def gpu_mapper():
@@ -332,6 +336,267 @@ def backtracking_line_search(f, x, expected_improve_rate,
 # RunningStat, ZFilter, StateWithTime
 ########################
 
+# current implementation
+###
+# class RunningStat(object):
+#     '''
+#     Keeps track of first and second moments (mean and variance)
+#     of a streaming time series.
+#      Taken from https://github.com/joschu/modular_rl
+#      Math in http://www.johndcook.com/blog/standard_deviation/
+#     '''
+#     def __init__(self, shape):
+#         self._n = 0
+#         self._M = np.zeros(shape,dtype=float)
+#         self._S = np.zeros(shape,dtype=float)
+#         # print(f"shape:{shape}")
+#     def push(self, x):
+#         # vector = np.vectorize(np.float_)
+#         # if type(x[1]) is dict:
+#         #     x1 = list(x)
+#         #     x1[1] = np.zeros(376,dtype=float)
+#         #     x = tuple(x1)
+#         x = np.asarray(x,dtype=float)
+#         # print(x)
+#         # print(x)
+#         # x[0] = np.array(list(map(np.float_, x[0])))
+#         # print(x)
+#         # mask = [False,True]
+#         # print(x.shape)
+#         # x = ma.array(x,mask = [0, 1])
+#         # assert x.shape == self._M.shape
+#         self._M = np.zeros(x.shape,dtype=float)
+#         self._S = np.zeros(x.shape,dtype=float)
+#         self._n += 1
+#         if self._n == 1:
+#             #elipsis in Python:
+#             # print("Ellipsis: {}".format(self._M[...]))
+#             # print(f"x: {x}")
+#             # self._M[0] = np.zeros(x[0].shape)
+#             # print(f"self._M[0]: {self._M[0]}")
+#             self._M[...] = x
+#         else:
+#             oldM = self._M.copy()
+#             self._M[...] = oldM + (x - oldM) / self._n
+#             self._S[...] = self._S + (x - oldM) * (x - self._M)
+#     @property
+#     def n(self):
+#         return self._n
+#     @property
+#     def mean(self):
+#         return self._M
+#     @property
+#     def var(self):
+#         # print(np.square(self._M))
+#         return self._S / (self._n - 1) if self._n > 1 else np.square(self._M)
+#     @property
+#     def std(self):
+#         if self.var.dtype != np.dtype('float'):
+#             print(self.var[1].dtype)
+#             # self.var = self.var.astype('float')
+#             # self.var = np.array(self.var,dtype="float64")
+#         # print(f"self.var[0]: {np.sqrt(self.var)}")
+#         arr = np.array(np.sqrt(self.var[0]))
+#         arr1 = np.array(np.sqrt(self.var[1]))
+#         con = np.array((arr, arr1))
+#         # return np.sqrt(self.var)
+#         return con
+#     @property
+#     def shape(self):
+#         return self._M.shape
+
+# class Identity:
+#     '''
+#     A convenience class which simply implements __call__
+#     as the identity function
+#     '''
+#     def __call__(self, x, *args, **kwargs):
+#         return x
+
+#     def reset(self):
+#         pass
+
+# class RewardFilter:
+#     """
+#     "Incorrect" reward normalization [copied from OAI code]
+#     Incorrect in the sense that we 
+#     1. update return
+#     2. divide reward by std(return) *without* subtracting and adding back mean
+#     """
+#     def __init__(self, prev_filter, shape, gamma, clip=None, read_only=False):
+#         assert shape is not None
+#         self.gamma = gamma
+#         self.prev_filter = prev_filter
+#         self.rs = RunningStat(shape)
+#         self.ret = np.zeros(shape)
+#         self.clip = clip
+#         self.read_only = read_only
+
+#     def __call__(self, x, **kwargs):
+#         x = self.prev_filter(x, **kwargs)
+#         self.ret = self.ret * self.gamma + x
+#         # The object might be from a pickle object which does not have this property.
+#         if not hasattr(self, 'read_only') or not self.read_only:
+#             self.rs.push(self.ret)
+#         x = x / (self.rs.std + 1e-8)
+#         if self.clip:
+#             x = np.clip(x, -self.clip, self.clip)
+#         return x
+    
+#     def reset(self):
+#         self.ret = np.zeros_like(self.ret)
+#         self.prev_filter.reset()
+
+# class ZFilter:
+#     """
+#     y = (x-mean)/std
+#     using running estimates of mean,std
+#     """
+#     def __init__(self, prev_filter, shape, center=True, scale=True, clip=None, read_only=False):
+#         assert shape is not None
+#         self.center = center
+#         self.scale = scale
+#         self.clip = clip
+#         self.rs = RunningStat(shape)
+#         self.prev_filter = prev_filter
+#         self.read_only = read_only
+
+#     def __call__(self, x, **kwargs):
+#         x = self.prev_filter(x, **kwargs)
+#         # The object might be from a pickle object which does not have this property.
+#         if not hasattr(self, 'read_only') or not self.read_only:
+#             self.rs.push(x)
+#         if self.center:
+#             #error as you cannot subtract two dictionaries from each other
+#             # print(f"x: {x}")
+#             # print(f"self.rs.mean = {self.rs.mean}")
+#             # if type(x[1]) is dict:
+#             #     # x[1] = np.zeros(1,dtype=object)
+#             #     x1 = list(x)
+#             #     x1[1] = np.zeros(1,dtype=object)
+#             #     x = tuple(x1)
+#             if type(x[1]) is dict:
+#                 # x[1] = np.zeros(1,dtype=object)
+#                 yew = x[0] - self.rs.mean[0]
+#                 x1 = list(x)
+#                 x1[0] = yew
+#                 x1[1] = np.zeros(376,dtype=float)
+#                 x = tuple(x1)
+#                 x = np.asarray(x,dtype=object)
+#                 # x = x - self.rs.mean
+            
+#             # x = set(x) ^ set(self.rs.mean)
+#         if self.scale:
+#             if self.center:
+#                 # if type(x[1]) is dict:
+#                 #     x1 = list(x)
+#                 #     x1[1] = np.zeros(376,dtype=object)
+#                 #     x = tuple(x1)
+#                 if type(x[1]) is dict:
+#                     x1 = list(x)
+#                     x1[1] = np.zeros(376,dtype=float)
+#                     x = tuple(x1)
+#                 x = np.asarray(x,dtype=object)
+#                 x = x / (self.rs.std + 1e-8)
+#             else:
+#                 diff = x - self.rs.mean
+#                 diff = diff/(self.rs.std + 1e-8)
+#                 x = diff + self.rs.mean
+#         if self.clip:
+#             if type(x[1]) is dict:
+#                 x1 = list(x)
+#                 x1[1] = np.zeros(376,dtype=float)
+#                 x = tuple(x1)
+#             x = np.asarray(x,dtype=object)
+#             min_clip = -self.clip
+#             max_clip = self.clip
+#             new_x0 = np.clip(x[0], min_clip, max_clip)
+#             new_x1 = np.clip(x[1], min_clip, max_clip)
+#             x = np.array((new_x0, new_x1))
+#             # x = np.clip(x, -self.clip, self.clip)
+        
+#         print(f'x: {x}')
+#         return x
+
+#     def reset(self):
+#         self.prev_filter.reset()
+
+# class StateWithTime:
+#     '''
+#     Keeps track of the time t in an environment, and 
+#     adds t/T as a dimension to the state, where T is the 
+#     time horizon, given at initialization.
+#     '''
+#     def __init__(self, prev_filter, horizon):
+#         self.counter = 0
+#         self.horizon = horizon
+#         self.prev_filter = prev_filter
+
+#     def __call__(self, x, reset=False, count=True, **kwargs):
+#         x = self.prev_filter(x, **kwargs)
+#         self.counter += 1 if count else 0
+#         self.counter = 0 if reset else self.counter
+#         return np.array(list(x) + [self.counter/self.horizon,])
+
+#     def reset(self):
+#         self.prev_filter.reset()
+
+# class Trajectories:
+#     def __init__(self, states=None, rewards=None, returns=None, not_dones=None,
+#                  actions=None, action_log_probs=None, advantages=None,
+#                  unrolled=False, values=None, action_means=None, action_std=None):
+
+#         self.states = states
+#         self.rewards = rewards
+#         self.returns = returns
+#         self.values = values
+#         self.not_dones = not_dones
+#         self.actions = actions
+#         self.action_log_probs = action_log_probs
+#         self.advantages = advantages
+#         self.action_means = action_means # A batch of vectors.
+#         self.action_std = action_std # A single vector.
+#         self.unrolled = unrolled
+
+#         """
+#         # this is disgusting and we should fix it
+#         if states is not None:
+#             num_saps = states.shape[0]
+#             assert states is None or states.shape[0] == num_saps
+#             assert rewards is None or rewards.shape[0] == num_saps
+#             assert returns is None or returns.shape[0] == num_saps
+#             assert values is None or values.shape[0] == num_saps
+#             assert not_dones is None or not_dones.shape[0] == num_saps
+#             assert actions is None or actions.shape[0] == num_saps
+#             assert action_log_probs is None or action_log_probs.shape[0] == num_saps
+#             assert advantages is None or advantages.shape[0] == num_saps
+
+#             self.size = num_saps
+#         """
+            
+        
+#     def unroll(self):
+#         assert not self.unrolled
+#         return self.tensor_op(unroll, should_wrap=False)
+
+#     def tensor_op(self, lam, should_wrap=True):
+#         if should_wrap:
+#             def op(*args):
+#                 return [lam(v) for v in args]
+#         else:
+#             op = lam
+
+#         tt = op(self.states, self.rewards, self.returns, self.not_dones)
+#         tt2 = op(self.actions, self.action_log_probs, self.advantages, self.action_means)
+#         values, = op(self.values)
+
+#         ts = Trajectories(states=tt[0], rewards=tt[1], returns=tt[2],
+#                           not_dones=tt[3], actions=tt2[0],
+#                           action_log_probs=tt2[1], advantages=tt2[2], action_means=tt2[3], action_std=self.action_std,
+#                           values=values, unrolled=True)
+
+#         return ts
+#
 class RunningStat(object):
     '''
     Keeps track of first and second moments (mean and variance)
@@ -341,8 +606,8 @@ class RunningStat(object):
     '''
     def __init__(self, shape):
         self._n = 0
-        self._M = np.zeros(shape)
-        self._S = np.zeros(shape)
+        self._M = np.zeros(shape,dtype=float)
+        self._S = np.zeros(shape,dtype=float)
     def push(self, x):
         x = np.asarray(x)
         assert x.shape == self._M.shape
@@ -495,7 +760,6 @@ class Trajectories:
             assert actions is None or actions.shape[0] == num_saps
             assert action_log_probs is None or action_log_probs.shape[0] == num_saps
             assert advantages is None or advantages.shape[0] == num_saps
-
             self.size = num_saps
         """
             

@@ -73,9 +73,17 @@ def main(params):
             assert v is not None, f"Value for {k} is None"
 
         # Create the agent from config file.
+        # print(params)
         p = Trainer.agent_from_params(params, store=None)
-        print('Loading pretrained model', params['load_model'])
+        # print('Loading pretrained model', params['load_model'])
         pretrained_model = torch.load(params['load_model'])
+        # print(f"p.policy_model: {p.policy_model}")
+        # print(pretrained_model['policy_model']['affine_layers.0.weight'].shape)
+        # print(pretrained_model['policy_model']['affine_layers.0.bias'].shape)
+        # print(pretrained_model['policy_model']['affine_layers.1.weight'].shape)
+        # print(pretrained_model['policy_model']['affine_layers.1.bias'].shape)
+        # print(pretrained_model['policy_model']['final_mean.weight'].shape)
+        # print(pretrained_model['policy_model']['final_mean.bias'].shape)
         if 'policy_model' in pretrained_model:
             p.policy_model.load_state_dict(pretrained_model['policy_model'])
         if 'val_model' in pretrained_model:
@@ -219,7 +227,7 @@ def main(params):
         for name, value in [('actions',all_actions), ('states', all_states), ('rewards', all_rewards), ('length', all_lens)]:
             with open(os.path.join(save_path, '{}.pkl'.format(name)), 'wb') as f:
                 pickle.dump(value, f)
-        print(params)
+        # print(params)
         with open(os.path.join(save_path, 'params.json'), 'w') as f:
             json.dump(params, f, indent=4)
 

@@ -83,6 +83,8 @@ class Trainer():
         self.log_every = log_every
         self.policy_net_class = policy_net_class
 
+        # print(f"self.NUM_FEATURES: {self.NUM_FEATURES}")
+        # print(f"self.NUM_ACTIONS: {self.NUM_ACTIONS}")
         # Instantiation
         self.policy_model = policy_net_class(self.NUM_FEATURES, self.NUM_ACTIONS,
                                              self.INITIALIZATION,
@@ -1427,11 +1429,11 @@ class Trainer():
 
         advanced_logging = params['advanced_logging'] and store is not None
         log_every = params['log_every'] if store is not None else 0
-
         if params['cpu']:
             torch.set_num_threads(1)
         p = Trainer(agent_policy, agent_value, params, store, log_every=log_every,
                     advanced_logging=advanced_logging)
 
+        print(f"p: {p.policy_model}")
         return p
 
