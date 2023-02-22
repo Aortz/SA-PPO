@@ -19,8 +19,9 @@ def main():
     parser.add_argument('--script-location', type=str, default='.')
     parser.add_argument('--filter-param', action='append', nargs=2, help='Format: {parameter} {required value regex}')
     args = parser.parse_args()
-
+    # print(f"args.logdir:{args.logdir}")
     reader = CollectionReader(args.logdir)
+    # print(f"reader:{reader}")
     metadata_df = reader.df(args.metadata_table)
 
     # Find all of the valid experiments, i.e. folders with a tensorboard/ directory inside of them
@@ -36,6 +37,7 @@ def main():
         try:
             for p in args.params:
                 param_value = metadata_df[metadata_df['exp_id'] == experiment_id][p][0]
+                
                 if p in parameter_filters and re.match(parameter_filters[p], param_value) is None:
                     raise ValueError("Filtered out---this exception will be caught.")
                 if type(param_value) == list:
@@ -43,14 +45,16 @@ def main():
 
                 params_to_fill.append(param_value)
             name_str = args.format_str.format(*params_to_fill) + "---" + experiment_id
-            tensorboard_arg_str += "%s:%s," % (name_str, os.path.join(args.logdir, experiment_id))
+            tensorboard_arg_str += "%s:%s/tensorboard," % (experiment_id, os.path.join(args.logdir, experiment_id))
         except IndexError as ie:
             print("Warning: Skipping experiment %s" % (experiment_id,))
-        except ValueError as ve:
+        except ValueError as ve: 
             pass
 
-
+    print(f"tensorboard_arg_str: {tensorboard_arg_str}")
     full_job_str = "tensorboard --logdir %s --port %d" % (tensorboard_arg_str, args.port)
+    print(f"full_job_str: {full_job_str}")
+    print(f"args.format_str:{type(args.format_str)}")
     open(os.path.join(args.script_location, 'tensorboard-view.sh'), 'w').write(full_job_str)
 
 if __name__ == "__main__":

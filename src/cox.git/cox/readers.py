@@ -33,6 +33,7 @@ class CollectionReader:
         for exp_id in tqdm.tqdm(os.listdir(directory)):
             if exp_filter is not None and not exp_filter(exp_id):
                 continue
+            # print(f"exp_id:{exp_id}")
             store_path = os.path.join(directory, exp_id, STORE_BASENAME)
             if not os.path.exists(store_path):
                 continue
@@ -44,9 +45,10 @@ class CollectionReader:
                 self.schemas[i] = store[i].schema
 
             table_list |= this_table_list
+            
             #store.close()
-
         self.tables = table_list
+        print(f"table_list:{table_list}")
 
     def close(self):
         '''
@@ -102,6 +104,7 @@ class CollectionReader:
                     continue
 
                 df = table.df
+                print(f"df: {df['5_rewards']}")
                 if append_exp_id:
                     df['exp_id'] = exp_id
 
@@ -150,6 +153,7 @@ class CollectionReader:
                 print(f"Encountered error with loading experiment {exp_id}")
                 if not skip_errors:
                     raise e
+        print(f"tables:{tables}")
 
         catted = pd.concat(tables)
         return catted

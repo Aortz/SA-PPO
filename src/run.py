@@ -142,6 +142,7 @@ def main(params):
         if 'envs' in pretrained_model:
             p.envs = pretrained_model['envs']
         for e in p.envs:
+            print(e)
             e.setup_visualization(params['show_env'], params['save_frames'], params['save_frames_path'])
     rewards = []
 
