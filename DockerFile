@@ -4,17 +4,35 @@ FROM continuumio/miniconda3:latest
 # Set the working directory
 WORKDIR /app
 
+# Install Git
+RUN apt-get update && \
+    apt-get install -y git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone the Git repository
+RUN git clone https://github.com/Aortz/SA-PPO.git
+
 # Copy the requirements file to the working directory
 COPY requirements.txt .
 
-# Install dependencies
-RUN conda update conda && \
-    conda create -n gym_env python=3.8 && \
-    conda init bash &&\
-    exec bash &&\
-    conda activate gym_env && \
-    pip install -r requirements.txt && \
-    conda install pytorch torchvision torchaudio cpuonly -c pytorch
+# Copy the environment.yml to the working directory
+COPY environment.yml .
+
+# # Install dependencies
+# RUN conda update conda && \
+#     conda create -n gym_env python=3.8 && \
+#     conda init bash &&\
+#     exec bash &&\
+#     conda activate gym_env && \
+#     pip install -r requirements.txt && \
+#     conda install pytorch torchvision torchaudio cpuonly -c pytorch
+
+# Create a new Conda environment and activate it
+RUN conda env create -f environment.yml && \
+    conda init && \
+    echo "conda activate mujoco_py" >> ~/.bashrc && \
+    echo "source activate mujoco_py" >> ~/.bashrc
 
 # Install OpenAI Gym
 RUN apt-get update && \
@@ -22,9 +40,13 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install gym && \
+RUN /bin/bash -c "source activate mujoco_py && \
+    pip install gym && \
     pip install pyvirtualdisplay && \
-    pip install gym[atari]
+    pip install auto-LiRPA && \
+    pip install gym[atari]"
 
 # Set the entry point
-ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
+# ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
+ENTRYPOINT ["tail"]
+CMD ["-f","/dev/null"]
