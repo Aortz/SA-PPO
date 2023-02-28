@@ -1,50 +1,60 @@
-# Set the base image
-FROM continuumio/miniconda3:latest
+# Set base image
+FROM ubuntu:latest
 
-# Set the working directory
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    bzip2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install required version of GLIBCXX
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional dependencies for rendering
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for rendering
+ENV DISPLAY=:99
+ENV PYTHONUNBUFFERED=1
+
+# Start Xvfb server for virtual screen rendering
+CMD ["Xvfb", ":99", "-screen", "0", "1024x768x16", "-ac", "+extension", "GLX", "+render", "-noreset"]
+
+# Clone Git repository
+RUN git clone https://github.com/Aortz/SA-PPO.git /app/my_project
+
+# Set working directory
 WORKDIR /app
 
-# Install Git
-RUN apt-get update && \
-    apt-get install -y git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Miniconda3-latest-Linux-x86_64.sh
 
-# Clone the Git repository
-RUN git clone https://github.com/Aortz/SA-PPO.git
+# Add Conda to the path
+ENV PATH="/opt/conda/bin:${PATH}"
 
-# Copy the requirements file to the working directory
-COPY requirements.txt .
-
-# Copy the environment.yml to the working directory
+# Copy environment.yml file
 COPY environment.yml .
 
-# # Install dependencies
-# RUN conda update conda && \
-#     conda create -n gym_env python=3.8 && \
-#     conda init bash &&\
-#     exec bash &&\
-#     conda activate gym_env && \
-#     pip install -r requirements.txt && \
-#     conda install pytorch torchvision torchaudio cpuonly -c pytorch
-
-# Create a new Conda environment and activate it
+# Create Conda environment and activate it
 RUN conda env create -f environment.yml && \
-    conda init && \
-    echo "conda activate mujoco_py" >> ~/.bashrc && \
-    echo "source activate mujoco_py" >> ~/.bashrc
+    echo "conda activate $(head -1 environment.yml | cut -d' ' -f2)" >> ~/.bashrc && \
+    /bin/bash -c "source ~/.bashrc"
 
 # Install OpenAI Gym
-RUN apt-get update && \
-    apt-get install -y xvfb && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN pip install gym
 
-RUN /bin/bash -c "source activate mujoco_py && \
-    pip install gym && \
-    pip install pyvirtualdisplay && \
-    pip install auto-LiRPA && \
-    pip install gym[atari]"
+# Set default command
+CMD ["bash"]
 
 # Set the entry point
 # ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
