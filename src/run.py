@@ -360,6 +360,8 @@ def add_common_parser_opts(parser):
     parser.add_argument('--show-env', type=str2bool, help='Show environment visualization')
     parser.add_argument('--save-frames', type=str2bool, help='Save environment frames')
     parser.add_argument('--save-frames-path', type=str, help='Path to save environment frames')
+    parser.add_argument('--render-mode', type=str, help='Select environment render mode', 
+                        choices=['rgb_array', 'human', 'rgb_array_list'])
 
     # For grid searches only
     # parser.add_argument('--cox-experiment-path', type=str, default='')
