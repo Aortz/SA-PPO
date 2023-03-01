@@ -1,7 +1,8 @@
 import random, sys, time, multiprocessing
 from auto_LiRPA import BoundedModule, BoundedTensor, BoundedParameter
 from auto_LiRPA.perturbations import *
-
+import torch
+import torch.nn as nn
 from policy_gradients.models import activation_with_name
 
 
