@@ -94,7 +94,7 @@ def cpu_tensorize(t):
     Returns:
     - Tensor version of t
     '''
-    t = np.array(t, dtype=np.float)
+    # t = np.array(t, dtype=np.float)
     # print(t)
     # new_t = t.reshape((1,))
     return ch.tensor(t).float()
