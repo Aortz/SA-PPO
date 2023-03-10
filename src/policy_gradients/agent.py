@@ -1,4 +1,3 @@
-import torch
 import torch as ch
 import copy
 import tqdm
@@ -55,7 +54,7 @@ class Trainer():
 
         # Whether to use GPU (as opposed to CPU)
         if not self.CPU:
-            torch.set_default_tensor_type("torch.cuda.FloatTensor")
+            ch.set_default_tensor_type("torch.cuda.FloatTensor")
 
         # Environment Loading
         def env_constructor():
@@ -182,7 +181,7 @@ class Trainer():
                 relaxed_policy_model = RelaxedCtsPolicyForState(
                         self.NUM_FEATURES, self.NUM_ACTIONS, time_in_state=time_in_state,
                         activation=self.policy_activation, policy_model=self.policy_model)
-                dummy_input1 = torch.randn(1, self.NUM_FEATURES)
+                dummy_input1 = ch.randn(1, self.NUM_FEATURES)
                 inputs = (dummy_input1, )
                 self.relaxed_policy_model = BoundedModule(relaxed_policy_model, inputs)
             else:
@@ -205,7 +204,7 @@ class Trainer():
         self.sarsa_eps_scheduler = eps_scheduler
         self.sarsa_beta_scheduler = beta_scheduler
         # Convert model with relaxation wrapper.
-        dummy_input = torch.randn(1, self.NUM_FEATURES + self.NUM_ACTIONS)
+        dummy_input = ch.randn(1, self.NUM_FEATURES + self.NUM_ACTIONS)
         self.relaxed_sarsa_model = BoundedModule(self.sarsa_model, dummy_input)
     
     """Initialize imitation (snooping) training."""
@@ -243,7 +242,7 @@ class Trainer():
                     if hidden is not None:
                         hidden = [h[:, alive_masks[i], :].detach() for h in hidden]
                     mean, std, hidden = self.imit_network.multi_forward(batch_states, hidden=hidden)
-                    batch_loss = torch.nn.MSELoss()(mean*mask, batch_actions*mask)
+                    batch_loss = ch.nn.MSELoss()(mean*mask, batch_actions*mask)
                     loss += batch_loss
                 loss.backward()
                 self.imit_opt.step()
@@ -261,7 +260,7 @@ class Trainer():
                     self.imit_opt.zero_grad()
                     sel_states, sel_actions, sel_not_dones = sel(all_states, all_actions, all_not_dones)  
                     act, _ = self.imit_network(sel_states)
-                    loss = torch.nn.MSELoss()(sel_actions, act)
+                    loss = ch.nn.MSELoss()(sel_actions, act)
             
                     loss.backward()
                     self.imit_opt.step()
@@ -671,23 +670,23 @@ class Trainer():
                 clamp_min = last_states - eps
                 clamp_max = last_states + eps
                 # Random start.
-                noise = torch.empty_like(last_states).uniform_(-step_eps, step_eps)
+                noise = ch.empty_like(last_states).uniform_(-step_eps, step_eps)
                 states = last_states + noise
-                with torch.enable_grad():
+                with ch.enable_grad():
                     for i in range(steps):
                         states = states.clone().detach().requires_grad_()
                         value = self.val_model(states).mean(dim=1)
                         value.backward()
                         update = states.grad.sign() * step_eps
                         # Clamp to +/- eps.
-                        states.data = torch.min(torch.max(states.data - update, clamp_min), clamp_max)
+                        states.data = ch.min(ch.max(states.data - update, clamp_min), clamp_max)
                     self.val_model.zero_grad()
                 return states.detach()
             else:
                 return last_states
         elif self.params.ATTACK_METHOD == "random":
             # Apply an uniform random noise.
-            noise = torch.empty_like(last_states).uniform_(-eps, eps)
+            noise = ch.empty_like(last_states).uniform_(-eps, eps)
             return (last_states + noise).detach()
         elif self.params.ATTACK_METHOD == "action" or self.params.ATTACK_METHOD == "action+imit":
             if steps > 0:
@@ -699,7 +698,7 @@ class Trainer():
                 clamp_max = last_states + eps
                 # SGLD noise factor. We simply set beta=1.
                 noise_factor = np.sqrt(2 * step_eps)
-                noise = torch.randn_like(last_states) * noise_factor
+                noise = ch.randn_like(last_states) * noise_factor
                 # The first step has gradient zero, so add the noise and projection directly.
                 states = last_states + noise.sign() * step_eps
                 # Current action at this state.
@@ -709,7 +708,7 @@ class Trainer():
                         print('\nLoading imitation network for attack: ', self.params.imit_model_path)
                         # Setup imitation network
                         self.setup_imit(train=False)
-                        imit_ckpt = torch.load(self.params.imit_model_path)
+                        imit_ckpt = ch.load(self.params.imit_model_path)
                         self.imit_network.load_state_dict(imit_ckpt['state_dict'])
                         self.imit_network.reset()
                         self.imit_network.pause_history()
@@ -719,7 +718,7 @@ class Trainer():
                 # Normalize stdev, avoid numerical issue
                 old_stdev /= (old_stdev.mean())
                 old_action = old_action.detach()
-                with torch.enable_grad():
+                with ch.enable_grad():
                     for i in range(steps):
                         states = states.clone().detach().requires_grad_()
                         if self.params.ATTACK_METHOD == "action+imit":
@@ -731,9 +730,9 @@ class Trainer():
                         # Reduce noise at every step.
                         noise_factor = np.sqrt(2 * step_eps) / (i+2)
                         # Project noisy gradient to step boundary.
-                        update = (states.grad + noise_factor * torch.randn_like(last_states)).sign() * step_eps
+                        update = (states.grad + noise_factor * ch.randn_like(last_states)).sign() * step_eps
                         # Clamp to +/- eps.
-                        states.data = torch.min(torch.max(states.data + update, clamp_min), clamp_max)
+                        states.data = ch.min(ch.max(states.data + update, clamp_min), clamp_max)
                     if self.params.ATTACK_METHOD == "action+imit": 
                         self.imit_network.zero_grad() 
                     self.policy_model.zero_grad()
@@ -749,7 +748,7 @@ class Trainer():
             if not hasattr(self, "sarsa_network"):
                 self.sarsa_network = ValueDenseNet(state_dim=self.NUM_FEATURES+self.NUM_ACTIONS, init="normal")
                 print("Loading sarsa network", self.params.ATTACK_SARSA_NETWORK)
-                sarsa_ckpt = torch.load(self.params.ATTACK_SARSA_NETWORK)
+                sarsa_ckpt = ch.load(self.params.ATTACK_SARSA_NETWORK)
                 sarsa_meta = sarsa_ckpt['metadata']
                 sarsa_eps = sarsa_meta['sarsa_eps'] if 'sarsa_eps' in sarsa_meta else "unknown"
                 sarsa_reg = sarsa_meta['sarsa_reg'] if 'sarsa_reg' in sarsa_meta else "unknown"
@@ -768,19 +767,19 @@ class Trainer():
                 clamp_min = last_states - eps
                 clamp_max = last_states + eps
                 # Random start.
-                noise = torch.empty_like(last_states).uniform_(-step_eps, step_eps)
+                noise = ch.empty_like(last_states).uniform_(-step_eps, step_eps)
                 states = last_states + noise
                 if use_action:
                     # Current action at this state.
                     old_action, old_stdev = self.policy_model(last_states)
                     old_stdev /= (old_stdev.mean())
                     old_action = old_action.detach()
-                with torch.enable_grad():
+                with ch.enable_grad():
                     for i in range(steps):
                         states = states.clone().detach().requires_grad_()
                         # This is the mean action...
                         actions = self.policy_model(states)[0]
-                        value = self.sarsa_network(torch.cat((last_states, actions), dim=1)).mean(dim=1)
+                        value = self.sarsa_network(ch.cat((last_states, actions), dim=1)).mean(dim=1)
                         if use_action:
                             action_change = (actions - old_action) / old_stdev
                             # We want to maximize the action change, thus the minus sign.
@@ -792,7 +791,7 @@ class Trainer():
                         loss.backward()
                         update = states.grad.sign() * step_eps
                         # Clamp to +/- eps.
-                        states.data = torch.min(torch.max(states.data - update, clamp_min), clamp_max)
+                        states.data = ch.min(ch.max(states.data - update, clamp_min), clamp_max)
                     self.val_model.zero_grad()
                 return states.detach()
             else:
@@ -806,7 +805,7 @@ class Trainer():
                                                  time_in_state=self.VALUE_CALC == "time",
                                                  activation=self.policy_activation)
                 print("Loading adversary policy network", self.params.ATTACK_ADVPOLICY_NETWORK)
-                advpolicy_ckpt = torch.load(self.params.ATTACK_ADVPOLICY_NETWORK)
+                advpolicy_ckpt = ch.load(self.params.ATTACK_ADVPOLICY_NETWORK)
                 self.attack_policy_network.load_state_dict(advpolicy_ckpt['adversary_policy_model'])
             # Unlike other attacks we don't need step or eps here.
             # We don't sample and use deterministic adversary policy here.
@@ -829,7 +828,7 @@ class Trainer():
     def collect_saps(self, num_saps, should_log=True, return_rewards=False,
                      should_tqdm=False, test=False, collect_adversary_trajectory=False):
         table_name_suffix = "_adv" if collect_adversary_trajectory else ""
-        with torch.no_grad():
+        with ch.no_grad():
             # Run trajectories, get values, estimate advantage
             output = self.run_trajectories(num_saps,
                                            return_rewards=return_rewards,
@@ -898,8 +897,8 @@ class Trainer():
     def sarsa_steps(self, saps):
         # Begin advanged logging code
         assert saps.unrolled
-        loss = torch.nn.SmoothL1Loss()
-        action_std = torch.exp(self.policy_model.log_stdev).detach().requires_grad_(False)  # Avoid backprop twice.
+        loss = ch.nn.SmoothL1Loss()
+        action_std = ch.exp(self.policy_model.log_stdev).detach().requires_grad_(False)  # Avoid backprop twice.
         # We treat all value epochs as one epoch.
         self.sarsa_eps_scheduler.set_epoch_length(self.params.VAL_EPOCHS * self.params.NUM_MINIBATCHES)
         self.sarsa_beta_scheduler.set_epoch_length(self.params.VAL_EPOCHS * self.params.NUM_MINIBATCHES)
@@ -923,10 +922,10 @@ class Trainer():
                 self.sarsa_eps_scheduler.step_batch()
                 self.sarsa_beta_scheduler.step_batch()
                 
-                inputs = torch.cat((sel_states, sel_actions), dim=1)
+                inputs = ch.cat((sel_states, sel_actions), dim=1)
                 # action_diff = self.sarsa_eps_scheduler.get_eps() * action_std
-                # inputs_lb = torch.cat((sel_states, sel_actions - action_diff), dim=1).detach().requires_grad_(False)
-                # inputs_ub = torch.cat((sel_states, sel_actions + action_diff), dim=1).detach().requires_grad_(False)
+                # inputs_lb = ch.cat((sel_states, sel_actions - action_diff), dim=1).detach().requires_grad_(False)
+                # inputs_ub = ch.cat((sel_states, sel_actions + action_diff), dim=1).detach().requires_grad_(False)
                 # bounded_inputs = BoundedTensor(inputs, ptb=PerturbationLpNorm(norm=np.inf, eps=None, x_L=inputs_lb, x_U=inputs_ub))
                 bounded_inputs = BoundedTensor(inputs, ptb=PerturbationLpNorm(norm=np.inf, eps=self.sarsa_eps_scheduler.get_eps()))
 
@@ -950,7 +949,7 @@ class Trainer():
                     # Output dimension is 1. Remove the extra dimension and keep only the batch dimension.
                     lb = lb.squeeze(-1)
                     ub = ub.squeeze(-1)
-                    diff = torch.max(ub - q, q - lb)
+                    diff = ch.max(ub - q, q - lb)
                     reg_loss = self.params.SARSA_REG * (diff * diff).mean()
                     sarsa_loss = q_loss + reg_loss
                     reg_loss = reg_loss.item()
@@ -1193,16 +1192,16 @@ class Trainer():
         if compute_bounds and not hasattr(self, "relaxed_policy_model"):
             self.create_relaxed_model()
         #saps, avg_ep_reward, avg_ep_length = self.collect_saps(num_saps=None, should_log=True, test=True, num_episodes=num_episodes)
-        with torch.no_grad():
+        with ch.no_grad():
             output = self.run_test_trajectories(max_len=max_len)
             ep_length, ep_reward, actions, action_means, states = output
             msg = "Episode reward: %f | episode length: %f"
             print(msg % (ep_reward, ep_length))
             if compute_bounds:
                 if original_stdev is None:
-                    kl_stdev = torch.exp(self.policy_model.log_stdev)
+                    kl_stdev = ch.exp(self.policy_model.log_stdev)
                 else:
-                    kl_stdev = torch.exp(original_stdev)
+                    kl_stdev = ch.exp(original_stdev)
                 eps = float(self.params.ROBUST_PPO_EPS) if self.params.ATTACK_EPS == "same" else float(self.params.ATTACK_EPS)
                 kl_upper_bound = get_state_kl_bound(self.relaxed_policy_model, states, action_means,
                         eps=eps, beta=0.0,
@@ -1390,7 +1389,7 @@ class Trainer():
         agent = Trainer.agent_from_params(agent_params)
 
         def load_state_dict(model, ckpt_name):
-            mapper = ch.device('cuda:0') if not cpu else ch.device('cpu')
+            mapper = ch.device('cuda' if not cpu else 'cpu')
             state_dict = ckpts.get_state_dict(ckpt_name, map_location=mapper)
             model.load_state_dict(state_dict)
 
@@ -1430,7 +1429,7 @@ class Trainer():
         advanced_logging = params['advanced_logging'] and store is not None
         log_every = params['log_every'] if store is not None else 0
         if params['cpu']:
-            torch.set_num_threads(1)
+            ch.set_num_threads(10)
         p = Trainer(agent_policy, agent_value, params, store, log_every=log_every,
                     advanced_logging=advanced_logging)
 

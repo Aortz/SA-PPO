@@ -83,6 +83,7 @@ def cu_tensorize(t):
     Returns:
     - Tensor version of t
     '''
+    t = np.array(t, dtype=np.float)
     return ch.tensor(t).float().cuda()
 
 def cpu_tensorize(t):

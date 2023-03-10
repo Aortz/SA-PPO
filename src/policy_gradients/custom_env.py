@@ -1,9 +1,12 @@
 import os
 import numpy as np
 from PIL import Image
+import torch
 from gymnasium.spaces.discrete import Discrete
 from gymnasium.spaces.box import Box as Continuous
 import gymnasium as gym
+from mujoco_py import GlfwContext
+from gymnasium.wrappers import HumanRendering
 import random
 from .torch_utils import RunningStat, ZFilter, Identity, StateWithTime, RewardFilter
 
@@ -21,7 +24,10 @@ class Env:
     '''
     def __init__(self, game, norm_states, norm_rewards, params, add_t_with_horizon=None, clip_obs=None, clip_rew=None, 
             show_env=False, save_frames=False, save_frames_path=""):
-        self.env = gym.make(game,render_mode='human')
+        self.env = gym.make(game,render_mode=params.render_mode)
+        self.render_mode = params.render_mode
+        self.game = game
+        GlfwContext(offscreen=True)
         clip_obs = None if clip_obs < 0 else clip_obs
         clip_rew = None if clip_rew < 0 else clip_rew
 
@@ -71,7 +77,7 @@ class Env:
         self.save_frames_path = save_frames_path
         self.episode_counter = 0
         self.frame_counter = 0
-        if self.save_frames:
+        if self.save_frames and self.render_mode == "rgb_array":
             print(f'We will save frames to {self.save_frames_path}!')
             os.makedirs(os.path.join(self.save_frames_path, "000"), exist_ok=True)
     
@@ -103,7 +109,7 @@ class Env:
         self.total_true_reward = 0.0
         self.counter = 0.0
         self.episode_counter += 1
-        if self.save_frames:
+        if self.save_frames and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
             os.makedirs(os.path.join(self.save_frames_path, f"{self.episode_counter:03d}"), exist_ok=True)
             self.frame_counter = 0
         self.state_filter.reset()
@@ -116,12 +122,19 @@ class Env:
         if self.show_env:
             self.env.render()
         # Frameskip (every 6 frames, will be rendered at 25 fps)
-        if self.save_frames and int(self.counter) % 6 == 0:
+        if self.save_frames and int(self.counter) % 6 == 0 and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
             image = self.env.render()
             path = os.path.join(self.save_frames_path, f"{self.episode_counter:03d}", f"{self.frame_counter+1:04d}.bmp")
-            # image = Image.fromarray(image)
-            # image.save(path)
+            image = Image.fromarray(image)
+            image.save(path)
             self.frame_counter += 1
+        elif self.render_mode == "rgb_array_list":
+            current_dir =  os.path.abspath(os.path.dirname(__file__))
+            parent_dir = os.path.abspath(current_dir + "/../")
+            path = os.path.join(parent_dir,self.save_frames_path,"video")
+            # print(path)
+            # print(os.path.abspath(path))
+            gym.wrappers.RecordVideo(self.env, video_folder=path, episode_trigger = lambda x: x % 100 == 0, name_prefix=f"{self.game}-video")
         state = self.state_filter(state)
         self.total_true_reward += reward
         self.counter += 1

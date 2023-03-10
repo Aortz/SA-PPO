@@ -11,7 +11,7 @@ import sys
 import json
 import torch
 from cox.store import Store, schema_from_dict
-
+import sys
 
 # Tee object allows for logging to both stdout and to file
 class Tee(object):
@@ -47,7 +47,7 @@ def main(params):
     metadata_schema = schema_from_dict(params)
     base_directory = params['out_dir']
     store = Store(base_directory)
-
+    sys.setrecursionlimit(10000)
     # redirect stderr, stdout to file
     """
     def make_err_redirector(stream_name):
@@ -360,6 +360,8 @@ def add_common_parser_opts(parser):
     parser.add_argument('--show-env', type=str2bool, help='Show environment visualization')
     parser.add_argument('--save-frames', type=str2bool, help='Save environment frames')
     parser.add_argument('--save-frames-path', type=str, help='Path to save environment frames')
+    parser.add_argument('--render-mode', type=str, help='Select environment render mode', 
+                        choices=['rgb_array', 'human', 'rgb_array_list'])
 
     # For grid searches only
     # parser.add_argument('--cox-experiment-path', type=str, default='')

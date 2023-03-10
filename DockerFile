@@ -1,152 +1,257 @@
-    # Stage 1: Build environment
-    FROM nvidia/cuda:11.5.1-devel-ubuntu20.04 AS build
+# Stage 1: Build environment
+FROM nvidia/cuda:11.5.1-devel-ubuntu20.04 AS build
 
-    # Install system dependencies
-    RUN apt-get update && apt-get install -y \
-        git \
-        wget \
-        bzip2 \
-        sudo \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    bzip2 \
+    sudo \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-    # Install required version of GLIBCXX
-    RUN apt-get update && apt-get install -y \
-        libstdc++6 \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+# Install required version of GLIBCXX
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-    # Install additional dependencies for rendering
-    RUN apt-get update && apt-get install -y \
-        libgl1-mesa-glx \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
-
-
-    # Install additional dependencies for rendering
-    RUN sudo apt-get update && apt-get install -y \
-        gcc \
-        libosmesa6-dev \
-        && apt-get clean 
-
-    RUN sudo apt clean
-
-    RUN sudo apt-get update && apt-get install -y \
-        patchelf 
-
-    RUN  sudo apt-get update && apt-get install -y \
-        libglfw3 \
-        xvfb \
-        && apt-get clean 
-
-    ARG DEBIAN_FRONTEND=noninteractive
-
-    RUN apt-get update && apt-get install -y \
-        ffmpeg \
-        && apt-get clean 
-
-    RUN apt-get update && apt-get install -y gnupg
-
-    # Clone Git repository
-    RUN git clone https://github.com/Aortz/SA-PPO.git /app/SA-PPO
-
-    # Set working directory
-    WORKDIR /app
-
-    # Install Miniconda
-    RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-        bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
-        rm Miniconda3-latest-Linux-x86_64.sh
-
-    # Install Mujoco
-    RUN mkdir -p /root/.mujoco \
-        && wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -O mujoco.tar.gz \
-        && tar -xf mujoco.tar.gz -C /root/.mujoco \
-        && rm mujoco.tar.gz
-
-    # Install Mujoco.txt activation key
-    RUN wget https://www.roboti.us/file/mjkey.txt
-
-    # Add Mujoco to the path
-    ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
-    ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
-    ENV FORCE_CUDA="1"
-
-    # Add Conda to the path
-    ENV PATH="/opt/conda/bin:${PATH}"
-
-    # Copy environment.yml file
-    COPY environment.yml .
-
-    # Create Conda environment and activate it
-    RUN conda env create -f environment.yml && \
-        echo "conda activate $(head -1 environment.yml | cut -d' ' -f2)" >> ~/.bashrc && \
-        /bin/bash -c "source ~/.bashrc"
-
-    # Stage 2: Runtime environment
-
-    FROM nvidia/cuda:11.5.1-runtime-ubuntu20.04
-
-    # Install system dependencies
-    RUN apt-get update && apt-get install -y \
-        libglib2.0-0 \
-        libxext6 \
-        libsm6 \
-        libxrender1 \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
-
-    # Ensure version `GLIBCXX_3.4.29' is on the computer
-    RUN sudo apt-get install software-properties-common
-    RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-    RUN sudo apt-get update && apt-get upgrade libstdc++6
-
-    # Copy files from the build stage
-    COPY --from=build /app /app
-    COPY --from=build /opt/conda /opt/conda
-    COPY --from=build /usr /usr
-    COPY --from=build /root /root
-    COPY --from=build /etc /etc
+# Install additional dependencies for rendering
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 
-    # Set the conda environment
-    ENV FORCE_CUDA="1"
+# Install additional dependencies for rendering
+RUN sudo apt-get update && apt-get install -y \
+    gcc \
+    libosmesa6-dev \
+    && apt-get clean 
 
-    # Add Mujoco to the path
-    ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
-    ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
-    ENV FORCE_CUDA="1"
+RUN sudo apt clean
 
-    # Add Conda to the path
-    ENV PATH="/opt/conda/bin:${PATH}"
+RUN sudo apt-get update && apt-get install -y \
+    patchelf 
 
-    # Install OpenAI Gym
-    RUN pip install gym
+RUN  sudo apt-get update && apt-get install -y \
+    libglfw3 \
+    xvfb \
+    && apt-get clean 
 
-    # Install auto_LiRPA
-    RUN pip install auto_LiRPA
+ARG DEBIAN_FRONTEND=noninteractive
 
-    # Install auto_LiRPA to render in  mode="rgb_array_list"
-    RUN pip install moviepy
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && apt-get clean 
+
+RUN apt-get update && apt-get install -y gnupg
+
+# Clone Git repository
+RUN git clone https://github.com/Aortz/SA-PPO.git /app/SA-PPO
+
+# Set working directory
+WORKDIR /app
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Miniconda3-latest-Linux-x86_64.sh
+
+# Install Mujoco
+RUN mkdir -p /root/.mujoco \
+    && wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -O mujoco.tar.gz \
+    && tar -xf mujoco.tar.gz -C /root/.mujoco \
+    && rm mujoco.tar.gz
+
+# Install Mujoco.txt activation key
+RUN wget https://www.roboti.us/file/mjkey.txt
+
+# Add Mujoco to the path
+ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+ENV FORCE_CUDA="1"
+
+# Add Conda to the path
+ENV PATH="/opt/conda/bin:${PATH}"
+
+# Copy environment.yml file
+COPY environment.yml .
+
+# Create Conda environment and activate it
+RUN conda env create -f environment.yml && \
+    echo "conda activate $(head -1 environment.yml | cut -d' ' -f2)" >> ~/.bashrc && \
+    /bin/bash -c "source ~/.bashrc"
+
+# Stage 2: Runtime environment
+
+FROM nvidia/cuda:11.5.1-runtime-ubuntu20.04
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure version `GLIBCXX_3.4.29' is on the computer
+RUN sudo apt-get install software-properties-common
+RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN sudo apt-get update && apt-get upgrade libstdc++6
+
+# Copy files from the build stage
+COPY --from=build /app /app
+COPY --from=build /opt/conda /opt/conda
+COPY --from=build /usr /usr
+COPY --from=build /root /root
+COPY --from=build /etc /etc
 
 
-    # Start Xvfb server for virtual screen rendering
-    CMD ["Xvfb", ":99", "-screen", "0", "1024x768x16", "-ac", "+extension", "GLX", "+render", "-noreset"]
+# Set the conda environment
+ENV FORCE_CUDA="1"
 
-    # Make Xvfb logs visible
-    VOLUME /tmp/.X11-unix
+# Add Mujoco to the path
+ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+ENV FORCE_CUDA="1"
 
-    # Set working directory
-    WORKDIR /app/SA-PPO/src
+# Add Conda to the path
+ENV PATH="/opt/conda/bin:${PATH}"
 
-    # Set environment variables for rendering
-    ENV DISPLAY=:99
-    ENV PYTHONUNBUFFERED=1
+# Install OpenAI Gym
+RUN pip install gym
 
-    # Set default command
-    CMD ["conda", "init","bash"]
+# Install auto_LiRPA
+RUN pip install auto_LiRPA
 
-    # Set the entry point
-    # ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
-    ENTRYPOINT ["tail"]
-    CMD ["-f","/dev/null"]
+# Install auto_LiRPA to render in  mode="rgb_array_list"
+RUN pip install moviepy
+
+
+# Start Xvfb server for virtual screen rendering
+CMD ["Xvfb", ":99", "-screen", "0", "1024x768x16", "-ac", "+extension", "GLX", "+render", "-noreset"]
+
+# Make Xvfb logs visible
+VOLUME /tmp/.X11-unix
+
+# Set working directory
+WORKDIR /app/SA-PPO/src
+
+# Set environment variables for rendering
+ENV DISPLAY=:99
+ENV PYTHONUNBUFFERED=1
+
+# Set default command
+CMD ["conda", "init","bash"]
+
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && apt-get clean 
+
+RUN apt-get update && apt-get install -y gnupg
+
+# Clone Git repository
+RUN git clone https://github.com/Aortz/SA-PPO.git /app/SA-PPO
+
+# Set working directory
+WORKDIR /app
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Miniconda3-latest-Linux-x86_64.sh
+
+# Install Mujoco
+RUN mkdir -p /root/.mujoco \
+    && wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -O mujoco.tar.gz \
+    && tar -xf mujoco.tar.gz -C /root/.mujoco \
+    && rm mujoco.tar.gz
+
+# Install Mujoco.txt activation key
+RUN wget https://www.roboti.us/file/mjkey.txt
+
+# Add Mujoco to the path
+ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+ENV FORCE_CUDA="1"
+
+# Add Conda to the path
+ENV PATH="/opt/conda/bin:${PATH}"
+
+# Copy environment.yml file
+COPY environment.yml .
+
+# Create Conda environment and activate it
+RUN conda env create -f environment.yml && \
+    echo "conda activate $(head -1 environment.yml | cut -d' ' -f2)" >> ~/.bashrc && \
+    /bin/bash -c "source ~/.bashrc"
+
+# Stage 2: Runtime environment
+
+FROM nvidia/cuda:11.5.1-runtime-ubuntu20.04
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure version `GLIBCXX_3.4.29' is on the computer
+RUN sudo apt-get install software-properties-common
+RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN sudo apt-get update && apt-get upgrade libstdc++6
+
+# Copy files from the build stage
+COPY --from=build /app /app
+COPY --from=build /opt/conda /opt/conda
+COPY --from=build /usr /usr
+COPY --from=build /root /root
+COPY --from=build /etc /etc
+
+
+# Set the conda environment
+ENV FORCE_CUDA="1"
+
+# Add Mujoco to the path
+ENV LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+ENV FORCE_CUDA="1"
+
+# Add Conda to the path
+ENV PATH="/opt/conda/bin:${PATH}"
+
+# Install OpenAI Gym
+RUN pip install gym
+
+# Install auto_LiRPA
+RUN pip install auto_LiRPA
+
+# Install auto_LiRPA to render in  mode="rgb_array_list"
+RUN pip install moviepy
+
+
+# Start Xvfb server for virtual screen rendering
+CMD ["Xvfb", ":99", "-screen", "0", "1024x768x16", "-ac", "+extension", "GLX", "+render", "-noreset"]
+
+# Make Xvfb logs visible
+VOLUME /tmp/.X11-unix
+
+# Set working directory
+WORKDIR /app/SA-PPO/src
+
+# Set environment variables for rendering
+ENV DISPLAY=:99
+ENV PYTHONUNBUFFERED=1
+
+# Set default command
+CMD ["conda", "init","bash"]
+
+# Set the entry point
+# ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
+ENTRYPOINT ["tail"]
+CMD ["-f","/dev/null"]
