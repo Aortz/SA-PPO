@@ -145,6 +145,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Set default command
 CMD ["conda", "init","bash"]
+<<<<<<< HEAD
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -250,6 +251,8 @@ ENV PYTHONUNBUFFERED=1
 
 # Set default command
 CMD ["conda", "init","bash"]
+=======
+>>>>>>> c81700c (I've edited)
 
 # Set the entry point
 # ENTRYPOINT ["conda", "run", "-n", "gym_env", "python"]
