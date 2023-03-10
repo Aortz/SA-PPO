@@ -11,7 +11,7 @@ import sys
 import json
 import torch
 from cox.store import Store, schema_from_dict
-
+import sys
 
 # Tee object allows for logging to both stdout and to file
 class Tee(object):
@@ -47,7 +47,7 @@ def main(params):
     metadata_schema = schema_from_dict(params)
     base_directory = params['out_dir']
     store = Store(base_directory)
-
+    sys.setrecursionlimit(10000)
     # redirect stderr, stdout to file
     """
     def make_err_redirector(stream_name):

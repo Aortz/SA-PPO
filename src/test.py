@@ -189,6 +189,7 @@ def main(params):
         for i in range(num_episodes):
             print('Episode %d / %d' % (i+1, num_episodes))
             ep_length, ep_reward, actions, action_means, states, kl_certificates = p.run_test(compute_bounds=params['compute_kl_cert'], use_full_backward=params['use_full_backward'], original_stdev=original_stdev)
+            # print(f"ep_reward: {np.isnan(ep_reward)}")
             if i == 0:
                 all_actions = actions.copy()
                 all_states = states.copy()
@@ -198,10 +199,17 @@ def main(params):
             if params['compute_kl_cert']:
                 print('Epoch KL certificates:', kl_certificates)
                 all_kl_certificates.append(kl_certificates)
-            all_rewards.append(ep_reward)
-            all_lens.append(ep_length)
+            
+            if not np.isnan(ep_reward):
+                all_rewards.append(ep_reward)
+            if not np.isnan(ep_length):
+                all_lens.append(ep_length)
+
             # Current step mean, std, min and max
-            mean_reward, std_reward, min_reward, max_reward = np.mean(all_rewards), np.std(all_rewards), np.min(all_rewards), np.max(all_rewards)
+            try:
+                mean_reward, std_reward, min_reward, max_reward = np.mean(all_rewards), np.std(all_rewards), np.min(all_rewards), np.max(all_rewards)
+            except ValueError:
+                pass
 
             if i > num_episodes // 5 and params['early_terminate'] and params['sqlite_path'] and params['attack_method'] != 'none':
                 # Attempt to early terminiate if some other attacks have done with low reward.
