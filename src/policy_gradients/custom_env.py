@@ -5,14 +5,7 @@ import torch
 from gymnasium.spaces.discrete import Discrete
 from gymnasium.spaces.box import Box as Continuous
 import gymnasium as gym
-<<<<<<< HEAD
-<<<<<<< HEAD
 from mujoco_py import GlfwContext
-=======
->>>>>>> c11dab1 (edited files)
-=======
-from mujoco_py import GlfwContext
->>>>>>> c81700c (I've edited)
 from gymnasium.wrappers import HumanRendering
 import random
 from .torch_utils import RunningStat, ZFilter, Identity, StateWithTime, RewardFilter
@@ -33,17 +26,8 @@ class Env:
             show_env=False, save_frames=False, save_frames_path=""):
         self.env = gym.make(game,render_mode=params.render_mode)
         self.render_mode = params.render_mode
-<<<<<<< HEAD
-<<<<<<< HEAD
         self.game = game
         GlfwContext(offscreen=True)
-=======
-        print(torch.cuda.is_available())
->>>>>>> c11dab1 (edited files)
-=======
-        self.game = game
-        GlfwContext(offscreen=True)
->>>>>>> c81700c (I've edited)
         clip_obs = None if clip_obs < 0 else clip_obs
         clip_rew = None if clip_rew < 0 else clip_rew
 
@@ -125,15 +109,7 @@ class Env:
         self.total_true_reward = 0.0
         self.counter = 0.0
         self.episode_counter += 1
-<<<<<<< HEAD
-<<<<<<< HEAD
         if self.save_frames and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
-=======
-        if self.save_frames and self.render_mode == "rgb_array":
->>>>>>> c11dab1 (edited files)
-=======
-        if self.save_frames and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
->>>>>>> c81700c (I've edited)
             os.makedirs(os.path.join(self.save_frames_path, f"{self.episode_counter:03d}"), exist_ok=True)
             self.frame_counter = 0
         self.state_filter.reset()
@@ -146,25 +122,10 @@ class Env:
         if self.show_env:
             self.env.render()
         # Frameskip (every 6 frames, will be rendered at 25 fps)
-<<<<<<< HEAD
-<<<<<<< HEAD
         if self.save_frames and int(self.counter) % 6 == 0 and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
             image = self.env.render()
             path = os.path.join(self.save_frames_path, f"{self.episode_counter:03d}", f"{self.frame_counter+1:04d}.bmp")
             image = Image.fromarray(image)
-=======
-        if self.save_frames and int(self.counter) % 6 == 0 and self.render_mode == "rgb_array":
-=======
-        if self.save_frames and int(self.counter) % 6 == 0 and self.render_mode == "rgb_array" and self.episode_counter % 500 == 0:
->>>>>>> c81700c (I've edited)
-            image = self.env.render()
-            path = os.path.join(self.save_frames_path, f"{self.episode_counter:03d}", f"{self.frame_counter+1:04d}.bmp")
-            image = Image.fromarray(image)
-<<<<<<< HEAD
-            print(path)
->>>>>>> c11dab1 (edited files)
-=======
->>>>>>> c81700c (I've edited)
             image.save(path)
             self.frame_counter += 1
         elif self.render_mode == "rgb_array_list":
@@ -173,18 +134,7 @@ class Env:
             path = os.path.join(parent_dir,self.save_frames_path,"video")
             # print(path)
             # print(os.path.abspath(path))
-<<<<<<< HEAD
-<<<<<<< HEAD
             gym.wrappers.RecordVideo(self.env, video_folder=path, episode_trigger = lambda x: x % 100 == 0, name_prefix=f"{self.game}-video")
-=======
-            self.env = gym.wrappers.RecordVideo(self.env, video_folder=path, episode_trigger = lambda x: x % 100 == 0, name_prefix="rl-video")
-        elif self.render_mode == "rgb_array":
-            wrapped = HumanRendering(self.env)
-            obs, _ = wrapped.reset() 
->>>>>>> c11dab1 (edited files)
-=======
-            gym.wrappers.RecordVideo(self.env, video_folder=path, episode_trigger = lambda x: x % 100 == 0, name_prefix=f"{self.game}-video")
->>>>>>> c81700c (I've edited)
         state = self.state_filter(state)
         self.total_true_reward += reward
         self.counter += 1
